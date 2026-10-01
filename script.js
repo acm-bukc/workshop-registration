@@ -2,6 +2,7 @@ const STORAGE_KEY = "acm-bahria-session-registrations";
 // Change to false to close the local form. The Google Sheets backend has its own switch below.
 const REGISTRATION_OPEN = true;
 const ALLOWED_DEPARTMENTS = ["computer science", "information technology", "artificial intelligence"];
+const ALLOWED_SEMESTERS = ["1", "2", "3", "4", "5", "6", "7", "8"];
 // Paste your deployed Google Apps Script web-app URL here after setup.
 const GOOGLE_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbxPWCqwZ8CpZhZj_UlucFu_8Na9Ztqe6q0HnUmyEE-AeIdzo9gq3-TrGp3pVUSWns9K/exec";
 
@@ -14,6 +15,7 @@ const fields = {
   enrollment: document.querySelector("#enrollment"),
   phone: document.querySelector("#phone"),
   department: document.querySelector("#department"),
+  semester: document.querySelector("#semester"),
   linkedin: document.querySelector("#linkedin")
 };
 
@@ -48,22 +50,25 @@ function markInvalid(field, invalid) {
   field.closest(".field").classList.toggle("invalid", invalid);
 }
 
-function validate(name, enrollment, phone, department, linkedin) {
+function validate(name, enrollment, phone, department, semester, linkedin) {
   const errors = [];
   const nameValid = /^[a-zA-Z][a-zA-Z .'-]{2,59}$/.test(name);
   const enrollmentValid = /^[a-zA-Z0-9][a-zA-Z0-9/_-]{2,29}$/.test(enrollment);
   const phoneValid = /^(03\d{9}|\+923\d{9})$/.test(phone);
   const departmentValid = ALLOWED_DEPARTMENTS.includes(department);
+  const semesterValid = ALLOWED_SEMESTERS.includes(semester);
   const linkedinValid = !linkedin || /^https?:\/\/(www\.)?linkedin\.com\/(in|pub)\/[a-zA-Z0-9%_-]+\/?(?:\?.*)?$/i.test(linkedin);
   markInvalid(fields.name, !nameValid);
   markInvalid(fields.enrollment, !enrollmentValid);
   markInvalid(fields.phone, !phoneValid);
   markInvalid(fields.department, !departmentValid);
+  markInvalid(fields.semester, !semesterValid);
   markInvalid(fields.linkedin, !linkedinValid);
   if (!nameValid) errors.push("Enter a valid name (at least 3 letters).");
   if (!enrollmentValid) errors.push("Enter a valid enrollment number.");
   if (!phoneValid) errors.push("Enter a valid Pakistani phone number, for example 03001234567.");
   if (!departmentValid) errors.push("Select one of the available departments.");
+  if (!semesterValid) errors.push("Select a valid semester (1-8).");
   if (!linkedinValid) errors.push("Enter a valid LinkedIn profile URL or leave it blank.");
   return errors;
 }
@@ -90,9 +95,10 @@ form.addEventListener("submit", async (event) => {
   const enrollment = normalize(data.get("enrollment") || "");
   const phone = normalizedPhone(data.get("phone") || "");
   const department = normalize(data.get("department") || "");
+  const semester = (data.get("semester") || "").trim();
   const linkedin = (data.get("linkedin") || "").trim();
   const localRegistrations = getRegistrations();
-  const validationErrors = validate(name, enrollment, phone, department, linkedin);
+  const validationErrors = validate(name, enrollment, phone, department, semester, linkedin);
 
   if (validationErrors.length) {
     showMessage(validationErrors[0], "error");
@@ -103,7 +109,7 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  const student = { name, enrollment, phone, department, linkedin };
+  const student = { name, enrollment, phone, department, semester, linkedin };
   submitButton.disabled = true;
   submitButton.querySelector("span").textContent = "Saving...";
   showMessage("Saving your registration...", "pending");

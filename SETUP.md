@@ -14,7 +14,7 @@
 
 To close registration, change `REGISTRATION_OPEN = true` to `REGISTRATION_OPEN = false` in `google-apps-script.gs`, redeploy the Apps Script web app as a new version, and update the same setting in `script.js` before uploading the website again. Set both values back to `true` when registration should reopen.
 
-The script creates a `Registrations` sheet automatically with timestamp, name, enrollment, phone, department, and LinkedIn columns. Duplicate names, enrollment numbers, and phone numbers are rejected by the sheet backend.
+The script creates a `Registrations` sheet automatically with timestamp, name, enrollment, phone, department, semester, and LinkedIn columns. Duplicate names, enrollment numbers, and phone numbers are rejected by the sheet backend.
 
 ## Publish the page as a link
 
