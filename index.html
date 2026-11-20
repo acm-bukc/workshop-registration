@@ -17,6 +17,7 @@
       <div class="availability" id="registrationStatus"><span class="status-dot"></span><strong>Registration is open</strong></div>
 
       <form id="registrationForm" novalidate>
+        <div class="form-grid">
         <label class="field" for="name">
           <span>Full name <b>Required</b></span>
           <input id="name" name="name" type="text" autocomplete="name" placeholder="Enter your full name" required>
@@ -25,33 +26,41 @@
           <span>Enrollment number <b>Required</b></span>
           <input id="enrollment" name="enrollment" type="text" autocomplete="off" placeholder="Enter your enrollment number" required>
         </label>
+        </div>
         <label class="field" for="phone">
           <span>Phone number <b>Required</b></span>
           <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="Enter your phone number" required>
         </label>
+        <div class="form-grid">
         <label class="field" for="department">
           <span>Department <b>Required</b></span>
           <select id="department" name="department" required>
             <option value="" selected disabled>Select your department</option>
-            <option>Computer Science</option>
-            <option>Information Technology</option>
-            <option>Artificial Intelligence</option>
+            <option value="BS Computer Science">BS Computer Science</option>
+            <option value="BS Information Technology">BS Information Technology</option>
+            <option value="BS Artificial Intelligence">BS Artificial Intelligence</option>
+            <option value="Bachelor of Software Engineering">Bachelor of Software Engineering (BSE)</option>
+            <option value="Bachelor of Computer Engineering">Bachelor of Computer Engineering (BCE)</option>
+            <option value="BS Business Analytics">BS Business Analytics</option>
+            <option value="Bachelor of Business Administration">Bachelor of Business Administration (BBA)</option>
+            <option value="BS Accounting and Finance">BS Accounting &amp; Finance</option>
           </select>
         </label>
         <label class="field" for="semester">
           <span>Semester <b>Required</b></span>
           <select id="semester" name="semester" required>
             <option value="" selected disabled>Select your semester</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
+            <option value="1">Semester 1</option>
+            <option value="2">Semester 2</option>
+            <option value="3">Semester 3</option>
+            <option value="4">Semester 4</option>
+            <option value="5">Semester 5</option>
+            <option value="6">Semester 6</option>
+            <option value="7">Semester 7</option>
+            <option value="8">Semester 8</option>
           </select>
         </label>
+        </div>
         <label class="field" for="linkedin">
           <span>LinkedIn profile <b>Optional</b></span>
           <input id="linkedin" name="linkedin" type="url" autocomplete="url" placeholder="https://linkedin.com/in/your-name">
