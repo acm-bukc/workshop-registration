@@ -1,10 +1,21 @@
 const STORAGE_KEY = "acm-bahria-session-registrations";
 // Change to false to close the local form. The Google Sheets backend has its own switch below.
 const REGISTRATION_OPEN = true;
-const ALLOWED_DEPARTMENTS = ["computer science", "information technology", "artificial intelligence"];
+const SEATS_PER_CLASS = 5;
+const ALLOWED_DEPARTMENTS = [
+  "bs computer science",
+  "bs information technology",
+  "bs artificial intelligence",
+  "bachelor of software engineering",
+  "bachelor of computer engineering",
+  "bs business analytics",
+  "bachelor of business administration",
+  "bs accounting and finance"
+];
 const ALLOWED_SEMESTERS = ["1", "2", "3", "4", "5", "6", "7", "8"];
+let seatAvailability = {};
 // Paste your deployed Google Apps Script web-app URL here after setup.
-const GOOGLE_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbxPWCqwZ8CpZhZj_UlucFu_8Na9Ztqe6q0HnUmyEE-AeIdzo9gq3-TrGp3pVUSWns9K/exec";
+const GOOGLE_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbxBvs5XMPjnALb_vvLXmmhVvK6m5K-e6dClKcEkr0D6IFfrvipML97mNEebDcyWvxLV/exec";
 
 const form = document.querySelector("#registrationForm");
 const message = document.querySelector("#formMessage");
@@ -41,9 +52,21 @@ function showMessage(text, type) {
 }
 
 function updateRegistrationStatus() {
-  registrationStatus.querySelector("strong").textContent = REGISTRATION_OPEN ? "Registration is open" : "Registration is closed";
-  registrationStatus.classList.toggle("closed", !REGISTRATION_OPEN);
-  submitButton.disabled = !REGISTRATION_OPEN;
+  const department = normalize(fields.department.value);
+  const semester = fields.semester.value;
+  const key = `${department}|${semester}`;
+  const remaining = department && semester ? (seatAvailability[key] ?? SEATS_PER_CLASS) : null;
+  const unavailable = remaining !== null && remaining <= 0;
+  const statusText = !REGISTRATION_OPEN
+    ? "Registration is closed"
+    : unavailable
+      ? "This class is full"
+      : remaining !== null
+        ? `${remaining} seat${remaining === 1 ? "" : "s"} remaining`
+        : "Registration is open";
+  registrationStatus.querySelector("strong").textContent = statusText;
+  registrationStatus.classList.toggle("closed", !REGISTRATION_OPEN || unavailable);
+  submitButton.disabled = !REGISTRATION_OPEN || unavailable;
 }
 
 function markInvalid(field, invalid) {
@@ -68,7 +91,7 @@ function validate(name, enrollment, phone, department, semester, linkedin) {
   if (!enrollmentValid) errors.push("Enter a valid enrollment number.");
   if (!phoneValid) errors.push("Enter a valid Pakistani phone number, for example 03001234567.");
   if (!departmentValid) errors.push("Select one of the available departments.");
-  if (!semesterValid) errors.push("Select a valid semester (1-8).");
+  if (!semesterValid) errors.push("Select a semester from 1 to 8.");
   if (!linkedinValid) errors.push("Enter a valid LinkedIn profile URL or leave it blank.");
   return errors;
 }
@@ -79,6 +102,10 @@ async function saveToGoogleSheet(student) {
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify(student)
   });
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    return { success: true };
+  }
   const result = await response.json();
   if (!response.ok || !result.success) throw new Error(result.message || "Registration could not be saved.");
   return result;
@@ -95,7 +122,7 @@ form.addEventListener("submit", async (event) => {
   const enrollment = normalize(data.get("enrollment") || "");
   const phone = normalizedPhone(data.get("phone") || "");
   const department = normalize(data.get("department") || "");
-  const semester = (data.get("semester") || "").trim();
+  const semester = String(data.get("semester") || "").trim();
   const linkedin = (data.get("linkedin") || "").trim();
   const localRegistrations = getRegistrations();
   const validationErrors = validate(name, enrollment, phone, department, semester, linkedin);
@@ -106,6 +133,11 @@ form.addEventListener("submit", async (event) => {
   }
   if (localRegistrations.some((student) => student.name === name || student.phone === phone || student.enrollment === enrollment)) {
     showMessage("This name, enrollment number, or phone number is already registered.", "error");
+    return;
+  }
+  const seatKey = `${department}|${semester}`;
+  if ((seatAvailability[seatKey] ?? SEATS_PER_CLASS) <= 0) {
+    showMessage("This department and semester class is full.", "error");
     return;
   }
 
@@ -120,16 +152,48 @@ form.addEventListener("submit", async (event) => {
     } else {
       localRegistrations.push({ ...student, registeredAt: new Date().toISOString() });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localRegistrations));
+      seatAvailability[seatKey] = Math.max(0, (seatAvailability[seatKey] ?? SEATS_PER_CLASS) - 1);
     }
     form.reset();
     Object.values(fields).forEach((field) => markInvalid(field, false));
     showMessage("Registration confirmed successfully.", "success");
+    await refreshAvailability();
+    updateRegistrationStatus();
   } catch (error) {
-    showMessage(error.message, "error");
+    const messageText = error instanceof TypeError && error.message.toLowerCase().includes("fetch")
+      ? "Could not connect to Google Sheets. Check that the Apps Script is deployed as a Web app for Anyone."
+      : error.message;
+    showMessage(messageText, "error");
   } finally {
-    submitButton.disabled = false;
     submitButton.querySelector("span").textContent = "Register now";
+    updateRegistrationStatus();
   }
 });
 
+async function refreshAvailability() {
+  if (!GOOGLE_SHEETS_ENDPOINT) {
+    const registrations = getRegistrations();
+    seatAvailability = {};
+    registrations.forEach((student) => {
+      const key = `${normalize(student.department)}|${student.semester}`;
+      seatAvailability[key] = Math.max(0, (seatAvailability[key] ?? SEATS_PER_CLASS) - 1);
+    });
+    updateRegistrationStatus();
+    return;
+  }
+  try {
+    const response = await fetch(GOOGLE_SHEETS_ENDPOINT);
+    if (!response.ok) return;
+    const result = await response.json();
+    if (result.availability) seatAvailability = result.availability;
+  } catch {
+    // The form will rely on the Apps Script to enforce the seat limit.
+  }
+  updateRegistrationStatus();
+}
+
+fields.department.addEventListener("change", updateRegistrationStatus);
+fields.semester.addEventListener("change", updateRegistrationStatus);
+
 updateRegistrationStatus();
+refreshAvailability();
